@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Desk</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div>
+          <h1>Weather Desk</h1>
+          <p>桌面版即時天氣儀表板</p>
+        </div>
+        <button id="themeToggle" class="ghost-btn">深色模式</button>
+      </div>
+
+      <section class="panel search-panel">
+        <h2>搜尋城市</h2>
+        <div class="search-row">
+          <input
+            id="cityInput"
+            list="citySuggestions"
+            type="text"
+            placeholder="輸入城市，例如 Taipei、Tokyo、London"
+          />
+          <datalist id="citySuggestions"></datalist>
+          <button id="searchBtn">查詢</button>
+        </div>
+
+        <div class="quick-actions">
+          <button id="locateBtn" class="secondary-btn">使用我的位置</button>
+          <button id="saveFavoriteBtn" class="secondary-btn">收藏目前城市</button>
+        </div>
+
+        <div class="status-row">
+          <span id="statusText">待命中</span>
+          <span id="cacheBadge" class="badge">即時資料</span>
+        </div>
+      </section>
+
+      <section class="panel mini-panel">
+        <h2>目前地點</h2>
+        <div id="currentPlaceMeta" class="mini-list">
+          <div class="mini-item">尚未查詢</div>
+        </div>
+      </section>
+
+      <section class="panel mini-panel">
+        <h2>收藏城市</h2>
+        <div id="favoritesList" class="tag-list"></div>
+      </section>
+
+      <section class="panel mini-panel">
+        <h2>最近搜尋</h2>
+        <div id="recentList" class="tag-list"></div>
+      </section>
+
+      <section class="panel mini-panel">
+        <h2>圖層控制</h2>
+        <div class="layer-grid">
+          <label><input type="checkbox" id="layerClouds" checked> 雲層</label>
+          <label><input type="checkbox" id="layerPrecip"> 降雨</label>
+          <label><input type="checkbox" id="layerTemp"> 溫度</label>
+          <label><input type="checkbox" id="layerWind"> 風場</label>
+          <label><input type="checkbox" id="layerRadar"> 雷達動畫</label>
+        </div>
+        <div class="radar-controls">
+          <button id="radarPrev" class="ghost-btn">◀</button>
+          <button id="radarPlay" class="ghost-btn">播放</button>
+          <button id="radarNext" class="ghost-btn">▶</button>
+          <button id="radarLatest" class="ghost-btn">最新</button>
+        </div>
+        <div id="radarMeta" class="radar-meta">雷達未啟用</div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <section class="hero-grid">
+        <div class="panel current-panel">
+          <div class="current-header">
+            <div>
+              <div id="cityName" class="city-name">Taipei</div>
+              <div id="citySubtitle" class="city-subtitle">載入中...</div>
+            </div>
+            <div id="weatherIcon" class="hero-icon">☀️</div>
+          </div>
+
+          <div class="temperature-row">
+            <div>
+              <div id="currentTemp" class="current-temp">--°C</div>
+              <div id="currentDesc" class="current-desc">--</div>
+            </div>
+            <div class="sun-box">
+              <div>日出：<span id="sunriseText">--</span></div>
+              <div>日落：<span id="sunsetText">--</span></div>
+            </div>
+          </div>
+
+          <div class="stat-grid" id="currentStats">
+            <div class="stat-card"><span>體感溫度</span><strong id="apparentTemp">--</strong></div>
+            <div class="stat-card"><span>濕度</span><strong id="humidity">--</strong></div>
+            <div class="stat-card"><span>風速</span><strong id="windSpeed">--</strong></div>
+            <div class="stat-card"><span>風向</span><strong id="windDir">--</strong></div>
+            <div class="stat-card"><span>氣壓</span><strong id="pressure">--</strong></div>
+            <div class="stat-card"><span>UV</span><strong id="uvCurrent">--</strong></div>
+            <div class="stat-card"><span>目前降雨</span><strong id="currentRain">--</strong></div>
+            <div class="stat-card"><span>空氣品質</span><strong id="aqiNow">--</strong></div>
+          </div>
+        </div>
+
+        <div class="panel air-panel">
+          <h2>空氣品質</h2>
+          <div class="aqi-main">
+            <div class="aqi-value" id="aqiBig">--</div>
+            <div class="aqi-label" id="aqiLabel">--</div>
+          </div>
+          <div class="aqi-grid">
+            <div class="stat-card"><span>PM2.5</span><strong id="pm25">--</strong></div>
+            <div class="stat-card"><span>PM10</span><strong id="pm10">--</strong></div>
+            <div class="stat-card"><span>臭氧</span><strong id="ozone">--</strong></div>
+            <div class="stat-card"><span>每日最高 UV</span><strong id="uvMax">--</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel charts-panel">
+        <div class="panel-title-row">
+          <h2>未來 12 小時趨勢</h2>
+          <div class="legend-note">折線：溫度 ｜ 長條：降雨機率</div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="tempChart"></canvas>
+        </div>
+      </section>
+
+      <section class="panel timeline-panel">
+        <div class="panel-title-row">
+          <h2>降雨時間軸</h2>
+          <div id="timelineHint" class="legend-note">最近 12 小時預報</div>
+        </div>
+        <div id="rainTimeline" class="timeline"></div>
+      </section>
+
+      <section class="panel hourly-panel">
+        <div class="panel-title-row">
+          <h2>未來 12 小時</h2>
+          <div class="legend-note">每小時氣溫 / 天氣 / 降雨</div>
+        </div>
+        <div id="hourlyForecast" class="hourly-grid"></div>
+      </section>
+
+      <section class="panel daily-panel">
+        <div class="panel-title-row">
+          <h2>未來 7 天</h2>
+          <div class="legend-note">最高 / 最低溫、天氣、日出日落</div>
+        </div>
+        <div id="dailyForecast" class="daily-list"></div>
+      </section>
+
+      <section class="panel map-panel">
+        <div class="panel-title-row">
+          <h2>衛星地圖、雲圖與雷達</h2>
+          <div class="legend-note">可點地圖任意位置查詢</div>
+        </div>
+        <div id="map"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
